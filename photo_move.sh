@@ -2,6 +2,8 @@
 
 # 初期設定
 INLINE_MODE=false
+INPUT_DIR=""
+OUTPUT_DIR=""
 
 # 引数処理
 while getopts ":i:o:" opt; do
@@ -13,10 +15,12 @@ while getopts ":i:o:" opt; do
   esac
 done
 
-# 対話モード
-if ! $INLINE_MODE; then
-  read -rp "入力ディレクトリのパスを入力してください: " INPUT_DIR
-  read -rp "出力ディレクトリのパスを入力してください: " OUTPUT_DIR
+# デフォルト設定（未指定ならカレントディレクトリ直下の input/output）
+if [ -z "$INPUT_DIR" ]; then
+  INPUT_DIR="./input"
+fi
+if [ -z "$OUTPUT_DIR" ]; then
+  OUTPUT_DIR="./output"
 fi
 
 # exiftoolチェック
@@ -25,12 +29,13 @@ if ! command -v exiftool &> /dev/null; then
   exit 1
 fi
 
-# ディレクトリ存在確認
+# 入力ディレクトリ確認（なければ作成して警告）
 if [ ! -d "$INPUT_DIR" ]; then
-  echo "入力ディレクトリが見つかりません: $INPUT_DIR"
-  exit 1
+  echo "入力ディレクトリが存在しないため作成しました: $INPUT_DIR"
+  mkdir -p "$INPUT_DIR"
 fi
 
+# 出力ディレクトリ作成
 mkdir -p "$OUTPUT_DIR"
 
 # 対象ファイルをループ
@@ -48,7 +53,7 @@ find "$INPUT_DIR" -type f \( -iname "*.jpeg" -o -iname "*.jpg" -o -iname "*.arw"
   # 撮影日ディレクトリ
   TARGET_DIR="$OUTPUT_DIR/$DATE"
   if [ ! -d "$TARGET_DIR" ]; then
-    mkdir -p "$TARGET_DIR"
+    mkdir "$TARGET_DIR"
   fi
 
   # JPEG系は prefix フォルダに添え字付きで移動
@@ -57,7 +62,7 @@ find "$INPUT_DIR" -type f \( -iname "*.jpeg" -o -iname "*.jpg" -o -iname "*.arw"
     SUBFOLDER="$TARGET_DIR/$PREFIX"
 
     if [ ! -d "$SUBFOLDER" ]; then
-      mkdir -p "$SUBFOLDER"
+      mkdir "$SUBFOLDER"
     fi
 
     COUNT=$(find "$SUBFOLDER" -type f -name "${PREFIX}_*.${EXT_LOWER}" | wc -l)
